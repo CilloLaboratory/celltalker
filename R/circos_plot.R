@@ -16,6 +16,12 @@
 #' @param cex_inner Size of the text for the ligand and receptors in the
 #' inner layer of the circos plot. Default is 0.4.
 #'
+#' @param lwd Control line thickness in the circos plots. Default is 3.
+#' 
+#' @param arr.length Control the length of the arrow head in circos plots. Default is 0.2
+#' 
+#' @param arr.width Control the width of the arrow head in circos plots. Default is half of 10% of the arrow width.
+#' 
 #' @return Generates a circos plot connecting ligands and receptors across cell types for a given sample group
 #'
 #' @importFrom magrittr %>%
@@ -45,7 +51,10 @@ circos_plot <- function(ligand_receptor_frame,
   ligand_color="blue",
   receptor_color="red",
   cex_outer=0.5,
-  cex_inner=0.4) {
+  cex_inner=0.4,
+  lwd=3,
+  arr.length=0.2, 
+  arr.width=(3*0.1)/2) {
 
   # Bind variables
   cell_type1 <- lig <- cell_type2 <- rec <- classes <- ranges <-
