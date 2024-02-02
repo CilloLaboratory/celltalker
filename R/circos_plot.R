@@ -259,7 +259,7 @@ circos_plot <- function(ligand_receptor_frame,
 
           circos.link(int.types.list[[i]]$classes[a], 1+sec.multi[i]*int.types.list[[i]]$ranges[a]-sec.multi[i]/2,
                       int.types.list[[i]]$to.class[[a]], 1+sec.multi[target]*int.types.list[[i]]$to.rec[a]-sec.multi[target]/2,
-                      0.43, 0.43, directional=1, lwd=3, arr.length=0.2, arr.width=(3*0.1)/2)
+                      0.43, 0.43, directional=1, lwd=lwd, arr.length=arr.length, arr.width=arr.width)
 
         } else {
 
