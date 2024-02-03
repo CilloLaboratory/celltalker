@@ -16,9 +16,9 @@
 #' @param cex_inner Size of the text for the ligand and receptors in the
 #' inner layer of the circos plot. Default is 0.4.
 #'
-#' @param facing_outer Direction of the text in the outer layer. Default is "downwards".
+#' @param facing_outer Direction of the text in the outer layer. Options are "inside", "outside", "clockwise", "reverse.clockwise", "downward", "bending.inside" and "bending.outside". Default is "downward".
 #' 
-#' @param facing_iner Direction of the text in the inner layer. Default is "downwards".
+#' @param facing_inner Direction of the text in the outer layer. Options are "inside", "outside", "clockwise", "reverse.clockwise", "downward", "bending.inside" and "bending.outside". Default is "downward".
 #' 
 #' @param lwd Control line thickness in the circos plots. Default is 3.
 #' 
@@ -56,8 +56,8 @@ circos_plot <- function(ligand_receptor_frame,
   receptor_color="red",
   cex_outer=0.5,
   cex_inner=0.4,
-  facing_outer="downwards",
-  facing_inner="downwards",
+  facing_outer="downward",
+  facing_inner="downward",
   lwd=3,
   arr.length=0.2, 
   arr.width=(3*0.1)/2) {

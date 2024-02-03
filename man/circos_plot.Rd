@@ -11,8 +11,8 @@ circos_plot(
   receptor_color = "red",
   cex_outer = 0.5,
   cex_inner = 0.4,
-  facing_outer = "downwards",
-  facing_inner = "downwards",
+  facing_outer = "downward",
+  facing_inner = "downward",
   lwd = 3,
   arr.length = 0.2,
   arr.width = (3 * 0.1)/2
@@ -35,15 +35,15 @@ the circos plot. Default is 0.5.}
 \item{cex_inner}{Size of the text for the ligand and receptors in the
 inner layer of the circos plot. Default is 0.4.}
 
-\item{facing_outer}{Direction of the text in the outer layer. Default is "downwards".}
+\item{facing_outer}{Direction of the text in the outer layer. Options are "inside", "outside", "clockwise", "reverse.clockwise", "downward", "bending.inside" and "bending.outside". Default is "downward".}
+
+\item{facing_inner}{Direction of the text in the outer layer. Options are "inside", "outside", "clockwise", "reverse.clockwise", "downward", "bending.inside" and "bending.outside". Default is "downward".}
 
 \item{lwd}{Control line thickness in the circos plots. Default is 3.}
 
 \item{arr.length}{Control the length of the arrow head in circos plots. Default is 0.2}
 
 \item{arr.width}{Control the width of the arrow head in circos plots. Default is half of 10% of the arrow width.}
-
-\item{facing_iner}{Direction of the text in the inner layer. Default is "downwards".}
 }
 \value{
 Generates a circos plot connecting ligands and receptors across cell types for a given sample group
