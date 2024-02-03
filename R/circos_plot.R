@@ -16,6 +16,10 @@
 #' @param cex_inner Size of the text for the ligand and receptors in the
 #' inner layer of the circos plot. Default is 0.4.
 #'
+#' @param facing_outer Direction of the text in the outer layer. Default is "downwards".
+#' 
+#' @param facing_iner Direction of the text in the inner layer. Default is "downwards".
+#' 
 #' @param lwd Control line thickness in the circos plots. Default is 3.
 #' 
 #' @param arr.length Control the length of the arrow head in circos plots. Default is 0.2
@@ -52,6 +56,8 @@ circos_plot <- function(ligand_receptor_frame,
   receptor_color="red",
   cex_outer=0.5,
   cex_inner=0.4,
+  facing_outer="downwards",
+  facing_inner="downwards",
   lwd=3,
   arr.length=0.2, 
   arr.width=(3*0.1)/2) {
@@ -146,7 +152,7 @@ circos_plot <- function(ligand_receptor_frame,
   circos.track(ylim = c(0, 1),track.height=0.1,panel.fun = function(x, y) {
     circos.rect(CELL_META$cell.xlim[1],CELL_META$cell.ylim[1],CELL_META$cell.xlim[2],CELL_META$cell.ylim[2],col=cell_group_colors[CELL_META$sector.numeric.index])
     circos.text(CELL_META$xcenter, y=2.5, CELL_META$sector.index,
-                facing = "downward",cex=cex_outer)
+                facing = facing_outer,cex=cex_outer,niceFacing = TRUE)
   })
   })
 
@@ -188,7 +194,7 @@ circos_plot <- function(ligand_receptor_frame,
         circos.rect(1,0,1+sec.multi.use*a,1,sector.index=int.types.list.multi[[i]]$classes[a],
                     col=ifelse(int.types.list.multi[[i]]$type[a]=="lig",ligand_color,receptor_color),track.index = 2)
         circos.text(1+sec.multi.use*a/2,4,sector.index=int.types.list.multi[[i]]$classes[a],
-                    labels=int.types.list.multi[[i]]$lig.rec[a],track.index = 2,facing="downward",cex=cex_inner)
+                    labels=int.types.list.multi[[i]]$lig.rec[a],track.index = 2,facing=facing_inner,cex=cex_inner,niceFacing=T)
         })
       } else {
 
@@ -198,7 +204,7 @@ circos_plot <- function(ligand_receptor_frame,
         circos.rect(1+sec.multi.use*(a-1),0,1+sec.multi.use*a,1,sector.index=int.types.list.multi[[i]]$classes[a],
                     col=ifelse(int.types.list.multi[[i]]$type[a]=="lig",ligand_color,receptor_color),track.index = 2)
         circos.text(1+sec.multi.use*a-sec.multi.use/2,4,sector.index=int.types.list.multi[[i]]$classes[a],
-                    labels=int.types.list.multi[[i]]$lig.rec[a],track.index = 2,facing="downward",cex=cex_inner)
+                    labels=int.types.list.multi[[i]]$lig.rec[a],track.index = 2,facing=facing_inner,cex=cex_inner,niceFacing=T)
         })
       }
 
@@ -213,7 +219,7 @@ circos_plot <- function(ligand_receptor_frame,
       circos.rect(1,0,2,1,sector.index=int.types.list.individ[[i]]$classes[1],
                   col=ifelse(int.types.list.individ[[i]]$type[1]=="lig",ligand_color,receptor_color),track.index = 2)
       circos.text(1.5,4,sector.index=int.types.list.individ[[i]]$classes[1],
-                  labels=int.types.list.individ[[i]]$lig.rec[1],track.index = 2,facing="downward",cex=cex_inner)
+                  labels=int.types.list.individ[[i]]$lig.rec[1],track.index = 2,facing=facing_inner,cex=cex_inner,niceFacing=T)
 
     }
 
