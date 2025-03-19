@@ -119,7 +119,7 @@ cell_type_numbers <- ligands_receptors %>%
 if (any(cell_type_numbers==1)) {
   singlet_index <- which(cell_type_numbers==1)
   for (i in 1:length(singlet_index)) {
-    new_row <- data.frame(cell_type=names(singlet_index)[1],
+    new_row <- data.frame(cell_type=names(singlet_index)[i],
       lig_rec=NA,
       lig_rec_class=NA,
       x_vec=2
@@ -127,11 +127,6 @@ if (any(cell_type_numbers==1)) {
     ligands_receptors <- rbind(ligands_receptors,new_row)
   }
 }
-
-# inner_track_length <- full_join(ligands_receptors,outer_frame_length,by=c("cell_type",# "x_vec")) %>%
-#  mutate(lig_rec=ifelse(is.na(lig_rec),"XXX",lig_rec)) %>%
-#  mutate(lig_rec_class=ifelse(is.na(lig_rec_class),"XXX",lig_rec_class)) %>%
-#  arrange(cell_type)
 
 inner_track_length <- ligands_receptors %>%
   arrange(cell_type)
