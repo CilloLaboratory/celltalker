@@ -39,6 +39,7 @@
 #' @importFrom dplyr pull
 #' @importFrom dplyr group_by
 #' @importFrom dplyr distinct
+#' @importFrom tibble enframe
 #' @importFrom circlize CELL_META
 #' @importFrom circlize circos.link
 #' @importFrom circlize circos.track
@@ -47,6 +48,7 @@
 #' @importFrom circlize circos.initialize
 #' @importFrom circlize circos.rect
 #' @importFrom circlize circos.text
+#' @importFrom circlize get.cell.meta.data
 #'
 #' @export
 
@@ -62,222 +64,135 @@ circos_plot <- function(ligand_receptor_frame,
   arr.length=0.2, 
   arr.width=(3*0.1)/2) {
 
-  # Bind variables
-  cell_type1 <- lig <- cell_type2 <- rec <- classes <- ranges <-
-    max_range <- to_class <- to_rec <- lig_rec <- ordered_lig_rec <- type <-
-    lig.rec <- to.class <- to.rec <- ordered.lig.rec <- NULL
+  ## Pieces to draw outer rec
+  ligand_cell_types <- ligand_receptor_frame %>%
+    split(.$cell_type1) %>%
+    sapply(.,nrow) %>%
+    enframe(.,name="cell_type",value="lig_length")
 
-  # Reformat data
-  part1 <- ligand_receptor_frame %>%
-    mutate(lig=sapply(strsplit(interaction,split="_"),function(x) x[[1]])) %>%
-    mutate(rec=sapply(strsplit(interaction,split="_"),function(x) x[[2]])) %>%
-    select(cell_type1,lig) %>%
-    distinct() %>%  
-    mutate(type="lig")
-  part2 <- ligand_receptor_frame %>%
-    mutate(lig=sapply(strsplit(interaction,split="_"),function(x) x[[1]])) %>%
-    mutate(rec=sapply(strsplit(interaction,split="_"),function(x) x[[2]])) %>%
-    select(cell_type2,rec) %>%
-    distinct() %>%  
-    mutate(type="rec")
-  colnames(part1) <- colnames(part2) <- c("classes","lig.rec","type")
+  receptor_cell_types <- ligand_receptor_frame %>%
+    split(.$cell_type2) %>%
+    sapply(.,nrow) %>%
+    enframe(.,name="cell_type",value="rec_length")
 
-  part12 <- rbind(part1,part2) %>%
-    group_by(classes) %>%
-    group_split()
-
-  part12 <- lapply(part12,function(x) {
-
-    x <- x %>%
-      mutate(ordered.lig.rec=paste(type,lig.rec,sep="_")) %>%
-      mutate(ranges=as.numeric(as.factor(ordered.lig.rec))) %>%
-      select(-ordered.lig.rec)
-
-  })
-
-  part12 <- do.call(rbind,part12)
-
-  to.join <- ligand_receptor_frame %>%
-    mutate(lig=sapply(strsplit(interaction,split="_"),function(x) x[[1]])) %>%
-    mutate(rec=sapply(strsplit(interaction,split="_"),function(x) x[[2]])) %>%
-    select(cell_type1,cell_type2,lig,rec)
-
-  colnames(to.join)[1:3] <- c("classes","to.class","lig.rec")
-
-  part3 <- part12
-
-  joined <- left_join(part3,to.join,by=c("classes","lig.rec"))
-  joined$to.rec <- NA
-
-  for (i in 1:nrow(joined)) {
-
-    sub.group <- joined[i,]
-    sub.joined <- joined %>% filter(classes==sub.group$to.class)
-    joined$to.rec[i] <- sub.joined[match(sub.group$rec,sub.joined$lig.rec),"ranges"] %>% pull()
-
-  }
-
-  final.construct <- joined
-
-  # Repair single class
-  single.class <- final.construct %>%
-    group_by(classes) %>%
-    summarize(max_range=max(ranges)) %>%
-    filter(max_range==1) %>%
-    pull(classes)
-
-  if (!length(single.class)==0) {
-
-    for (i in 1:length(single.class)) {
-
-      row.add <- final.construct[final.construct$classes==single.class[i],][1,]
-      row.add$ranges <- 2
-
-      final.construct <- rbind(final.construct,row.add)
-      final.construct <- final.construct %>%
-        arrange(classes)
-
+  outer_frame_length <- full_join(ligand_cell_types, receptor_cell_types,
+                                by="cell_type") %>%
+  mutate(sum = rowSums(across(where(is.numeric)),na.rm=T)) %>%
+  split(.$cell_type) %>%
+  lapply(.,function(x)
+  {
+    if (x$sum>1) {
+    data.frame(cell_type=rep(x$cell_type, x$sum),
+                x_vec=1:x$sum)
+    } else {
+        data.frame(cell_type=rep(x$cell_type, x$sum+1),
+                x_vec=1:(x$sum+1))
     }
+  }) %>%
+  do.call(rbind, .)
 
-  }
+  ## Pieces to draw rectangles
+  ligands <- ligand_receptor_frame %>%
+    mutate(lig_rec=sapply(strsplit(interaction,split="_"),function(x) x[[1]])) %>%
+    mutate(lig_rec_class="ligand") %>%
+    select(cell_type1,lig_rec,lig_rec_class) %>%
+    distinct()
+  
+  receptors <- ligand_receptor_frame %>%
+    mutate(lig_rec=sapply(strsplit(interaction,split="_"),function(x) x[[2]])) %>%
+    mutate(lig_rec_class="receptor") %>%
+    select(cell_type2,lig_rec,lig_rec_class) %>%
+    distinct()
 
-  final.construct <- final.construct %>%
-    arrange(classes,ranges)
+  colnames(ligands)[1] <- colnames(receptors)[1] <- c("cell_type")
+
+  ligands_receptors <- rbind(ligands,receptors) %>% 
+    group_by(cell_type) %>%
+    mutate(x_vec=row_number()) %>%
+    ungroup()
+
+  inner_track_length <- full_join(ligands_receptors,outer_frame_length,by=c("cell_type","x_vec")) %>%
+    mutate(lig_rec=ifelse(is.na(lig_rec),"XXX",lig_rec)) %>%
+    mutate(lig_rec_class=ifelse(is.na(lig_rec_class),"XXX",lig_rec_class)) %>%
+    arrange(cell_type)
+
+  ## Initalize circos plot 
+  inner_track_length$cell_type <- as.factor(inner_track_length$cell_type)
 
   circos.clear()
-  circos.par(gap.degree=10,track.margin=c(0,0.2))
-  circos.initialize(factors=final.construct$classes,x=final.construct$ranges)
+  circos.par(gap.degree = 10, track.margin=c(0,0.2))
+  circos.initialize(sectors=inner_track_length$cell_type, x = inner_track_length$x_vec)
 
-  suppressMessages({
-  circos.track(ylim = c(0, 1),track.height=0.1,panel.fun = function(x, y) {
-    circos.rect(CELL_META$cell.xlim[1],CELL_META$cell.ylim[1],CELL_META$cell.xlim[2],CELL_META$cell.ylim[2],col=cell_group_colors[CELL_META$sector.numeric.index])
-    circos.text(CELL_META$xcenter, y=2.5, CELL_META$sector.index,
-                facing = facing_outer,cex=cex_outer,niceFacing = TRUE)
+  ## Build outer layer 
+  circos.track(ylim = c(0, 2.5), track.height = 0.2, bg.border=NA, panel.fun = function(x, y) {
+    circos.rect(xleft=CELL_META$cell.xlim[1], xright=CELL_META$cell.xlim[2], ybottom=CELL_META$cell.ylim[1],ytop=CELL_META$cell.ylim[2]-1.5,
+              col = cell_group_colors[CELL_META$sector.numeric.index])
+    circos.text(x=CELL_META$xcenter,y=2.5,CELL_META$sector.index,facing = facing_outer,cex=cex_outer,niceFacing = TRUE)
   })
-  })
 
-  ## Build interior track with ligand/receptors colors and gene labels
-  circos.track(ylim = c(0, 1),track.height=0.05,bg.border="white")
+  ## Build inner layer 
+  circos.track(ylim = c(0, 1), track.height = 0.1, bg.border=NA)
+  inner_track_length_split <- inner_track_length %>%
+    filter(!lig_rec=="XXX") %>%
+    split(.$cell_type)
 
-  # Define multiplers for each sector
-  final.construct2 <- final.construct %>%
-    select(classes,lig.rec,ranges,type) %>%
-    distinct() %>%
-    arrange(classes,ranges)
-  ref.tab <- unname(table(final.construct2$classes))
-  sec.multi <- (ref.tab-1)/ref.tab
-  names(sec.multi) <- names(table(final.construct2$classes))
+  for (i in 1:length(inner_track_length_split)) {
 
-  # Loop to construct all sectors
-  # Ligands first
-  # Split into list of sectors
-  int.types.list <- final.construct2 %>%
-    group_split(classes)
+    cell_type_lig_rec <- inner_track_length_split[[i]]
+    sector_xlim <- get.cell.meta.data("xlim",sector.index=cell_type_lig_rec$cell_type[1])
+    sector_factor <- (sector_xlim[2] - sector_xlim[1]) / nrow(cell_type_lig_rec)
 
-  names(int.types.list) <- sapply(int.types.list,function(x) x$classes[1])
-
-  int.types.list.multi <- int.types.list.individ <- list("NA")
-
-  int.types.list.multi <- int.types.list[!names(int.types.list) %in% single.class]
-
-  int.types.list.individ <- int.types.list[names(int.types.list) %in% single.class]
-
-  for (i in 1:length(int.types.list.multi)) {
-
-    for (a in 1:nrow(int.types.list.multi[[i]])) {
-
-      if (a==1) {
-
-        sec.multi.use <- sec.multi[names(sec.multi)==int.types.list.multi[[i]]$classes[1]]
-
-        suppressMessages({
-        circos.rect(1,0,1+sec.multi.use*a,1,sector.index=int.types.list.multi[[i]]$classes[a],
-                    col=ifelse(int.types.list.multi[[i]]$type[a]=="lig",ligand_color,receptor_color),track.index = 2)
-        circos.text(1+sec.multi.use*a/2,4,sector.index=int.types.list.multi[[i]]$classes[a],
-                    labels=int.types.list.multi[[i]]$lig.rec[a],track.index = 2,facing=facing_inner,cex=cex_inner,niceFacing=T)
-        })
-      } else {
-
-        sec.multi.use <- sec.multi[names(sec.multi)==int.types.list.multi[[i]]$classes[1]]
-
-        suppressMessages({
-        circos.rect(1+sec.multi.use*(a-1),0,1+sec.multi.use*a,1,sector.index=int.types.list.multi[[i]]$classes[a],
-                    col=ifelse(int.types.list.multi[[i]]$type[a]=="lig",ligand_color,receptor_color),track.index = 2)
-        circos.text(1+sec.multi.use*a-sec.multi.use/2,4,sector.index=int.types.list.multi[[i]]$classes[a],
-                    labels=int.types.list.multi[[i]]$lig.rec[a],track.index = 2,facing=facing_inner,cex=cex_inner,niceFacing=T)
-        })
-      }
-
+  for (a in 1:nrow(cell_type_lig_rec)) {
+    if (a==1) {
+      circos.rect(xleft=CELL_META$xlim[1],xright=CELL_META$xlim[1]+a*sector_factor,ybottom=0,ytop=1,sector.index=cell_type_lig_rec$cell_type[a],
+      col=ifelse(cell_type_lig_rec$lig_rec_class[a]=="ligand",ligand_color,receptor_color))
+      circos.text(x=CELL_META$xlim[1]+a*sector_factor-(sector_factor*0.5),y=2.5,label=cell_type_lig_rec$lig_rec[a],sector.index=cell_type_lig_rec$cell_type[a],facing = facing_inner,cex=cex_inner,niceFacing = TRUE)
+    } else {
+      circos.rect(xleft=CELL_META$xlim[1]+(a-1)*sector_factor,xright=CELL_META$xlim[1]+a*sector_factor,ybottom=0,ytop=1,sector.index=cell_type_lig_rec$cell_type[a],
+      col=ifelse(cell_type_lig_rec$lig_rec_class[a]=="ligand",ligand_color,receptor_color))
+      circos.text(x=CELL_META$xlim[1]+(a)*sector_factor-(sector_factor*0.5),y=2.5,label=cell_type_lig_rec$lig_rec[a],sector.index=cell_type_lig_rec$cell_type[a],facing = facing_inner,cex=cex_inner,niceFacing = TRUE)
     }
+  }
 
   }
 
-  if (length(int.types.list.individ)>0) {
+  ## Build links
+  link_frame <- ligand_receptor_frame %>% 
+    mutate(ligand=sapply(strsplit(interaction,split="_"),function(x) x[[1]])) %>%
+    mutate(receptor=sapply(strsplit(interaction,split="_"),function(x) x[[2]])) %>%
+    select(cell_type1,cell_type2,ligand,receptor)
 
-    for (i in 1:length(int.types.list.individ)) {
+  for (i in 1:nrow(link_frame)) {
 
-      circos.rect(1,0,2,1,sector.index=int.types.list.individ[[i]]$classes[1],
-                  col=ifelse(int.types.list.individ[[i]]$type[1]=="lig",ligand_color,receptor_color),track.index = 2)
-      circos.text(1.5,4,sector.index=int.types.list.individ[[i]]$classes[1],
-                  labels=int.types.list.individ[[i]]$lig.rec[1],track.index = 2,facing=facing_inner,cex=cex_inner,niceFacing=T)
+    test <- link_frame[i,]
 
-    }
+    lig_index <- inner_track_length %>%
+      filter(lig_rec %in% test$ligand) %>%
+      filter(lig_rec_class=="ligand") %>%
+      pull(x_vec)
 
+    cell_type_lig <- inner_track_length_split[[test$cell_type1]]
+
+    sector_xlim_lig <- get.cell.meta.data("xlim",sector.index=test$cell_type1)
+    sector_factor_lig <- (sector_xlim_lig[2] - sector_xlim_lig[1]) / nrow(cell_type_lig) / 2
+
+  rec_index <- inner_track_length %>%
+    filter(lig_rec %in% test$receptor) %>%
+    filter(lig_rec_class=="receptor") %>%
+    pull(x_vec)
+
+  cell_type_rec <- inner_track_length_split[[test$cell_type2]]
+
+  sector_xlim_rec <- get.cell.meta.data("xlim",sector.index=test$cell_type2)
+  sector_factor_rec <- (sector_xlim_rec[2] - sector_xlim_rec[1]) / nrow(cell_type_rec) / 2
+
+  if (nrow(cell_type_rec)==2 & rec_index==nrow(cell_type_rec)) {
+    circos.link(sector.index1 = test$cell_type1, point1=lig_index+sector_factor_lig, sector.index2 = test$cell_type2, point2=rec_index - sector_factor_rec,
+rou1=0.3, rou2=0.3, directional=1, lwd=3, arr.length=0.2, arr.width=(3*0.1)/2)
+  } else {
+    circos.link(sector.index1 = test$cell_type1, point1=lig_index+sector_factor_lig, sector.index2 = test$cell_type2, point2=rec_index+sector_factor_rec,
+rou1=0.3, rou2=0.3, directional=1, lwd=3, arr.length=0.2, arr.width=(3*0.1)/2)
   }
-
-
-  ## Draw links
-  final.construct3 <- joined %>%
-        select(classes,lig.rec,ranges,to.class,to.rec) %>%
-        distinct()
-
-    split.construct <- final.construct3 %>%
-        split(.$classes)
-
-    final.construct3 <- lapply(split.construct,function(x) {
-        class.length <- length(unique(x$ranges))
-        if (class.length==1) {
-            x[,"ranges"] <- 1.5
-            x
-        } else {
-            x
-            }
-    }) %>%
-        do.call(rbind,.)
-    
-  int.types.list <- final.construct3 %>%
-    group_split(classes)
-
-  names(int.types.list) <- sapply(int.types.list,function(x) x$classes[1])
-
-
-  for (i in 1:length(int.types.list)) {
-
-    for (a in 1:nrow(int.types.list[[i]])) {
-
-      target <- which(!is.na(match(names(int.types.list),int.types.list[[i]]$to.class[[a]])))
-
-      if (length(target)==0) {
-
-      } else {
-
-        if (!int.types.list[[i]]$to.class[[a]] %in% single.class) {
-
-          circos.link(int.types.list[[i]]$classes[a], 1+sec.multi[i]*int.types.list[[i]]$ranges[a]-sec.multi[i]/2,
-                      int.types.list[[i]]$to.class[[a]], 1+sec.multi[target]*int.types.list[[i]]$to.rec[a]-sec.multi[target]/2,
-                      0.43, 0.43, directional=1, lwd=lwd, arr.length=arr.length, arr.width=arr.width)
-
-        } else {
-
-          circos.link(int.types.list[[i]]$classes[a], 1+sec.multi[i]*int.types.list[[i]]$ranges[a]-sec.multi[i]/2,
-                      int.types.list[[i]]$to.class[[a]], 1.5,
-                      0.43, 0.43, directional=1, lwd=3, arr.length=0.2, arr.width=(3*0.1)/2)
-        }
-
-
-      }
-
-    }
 
   }
 
