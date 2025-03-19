@@ -39,6 +39,7 @@
 #' @importFrom dplyr pull
 #' @importFrom dplyr group_by
 #' @importFrom dplyr distinct
+#' @importFrom dplyr full_join
 #' @importFrom tibble enframe
 #' @importFrom circlize CELL_META
 #' @importFrom circlize circos.link
