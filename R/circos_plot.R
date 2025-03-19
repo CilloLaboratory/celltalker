@@ -42,6 +42,7 @@
 #' @importFrom dplyr full_join
 #' @importFrom dplyr across
 #' @importFrom dplyr ungroup
+#' @importFrom dplyr row_number
 #' @importFrom tidyselect where
 #' @importFrom tibble enframe
 #' @importFrom circlize CELL_META
